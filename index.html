@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>RideHUD Web — Cycling Telemetry Studio</title>
+<meta name="description" content="Garmin FIT 파일을 브라우저에서 분석하고 계기판 영상을 생성하는 무료 웹 편집기"/>
+<link rel="stylesheet" href="./style.css"/>
+</head>
+<body>
+<header class="topbar">
+ <div class="brand"><div class="brand-icon">R<span>·</span></div><div><strong>RideHUD</strong><small>WEB STUDIO <em>v0.3</em></small></div></div>
+ <div class="top-actions"><span class="privacy">● 파일은 브라우저에서만 처리</span><button id="helpBtn" class="ghost sm">사용 방법</button></div>
+</header>
+<div class="app">
+ <aside class="sidebar">
+  <section class="group">
+   <div class="group-head"><span class="num">01</span><h2>라이딩 불러오기</h2></div>
+   <label class="dropbox" id="dropzone"><input id="fitInput" type="file" accept=".fit,application/octet-stream" hidden/><span class="drop-icon">↑</span><strong>FIT 파일 드래그 또는 클릭</strong><small>Garmin Edge 활동 기록 (*.fit)</small></label>
+   <button id="demoBtn" class="subtle-btn full">샘플 FIT으로 체험하기</button>
+   <div id="fileMeta" class="file-meta">아직 FIT 파일을 선택하지 않았습니다.</div>
+  </section>
+  <section class="group">
+   <div class="group-head"><span class="num">02</span><h2>계기판 구성</h2><span id="layersCount" class="count">0개</span></div>
+   <div class="flex"><select id="addMetric" aria-label="추가할 데이터"><option value="">항목 추가...</option></select><button id="addBtn" class="add-btn" title="항목 추가">＋</button></div>
+   <div id="layers" class="layers"></div>
+   <div class="flex"><button id="presetSimple" class="subtle-btn">기본 8개</button><button id="presetAll" class="subtle-btn">18개 전체</button></div>
+   <div class="flex"><button id="saveLayout" class="subtle-btn">배치 저장</button><button id="loadLayout" class="subtle-btn">배치 불러오기</button><input type="file" id="layoutFile" accept=".json" hidden/></div>
+   <div class="edit-options" id="itemOptions" hidden>
+    <label>선택 항목 <select id="changeMetric"></select></label>
+    <div class="flex"><label>색상 <input id="itemColor" type="color" value="#f9d65b"/></label><button id="deleteItem" class="danger-btn">삭제</button></div>
+   </div>
+  </section>
+  <section class="group">
+   <div class="group-head"><span class="num">03</span><h2>화면 스타일</h2></div>
+   <div class="form-row"><label for="styleSelect">카드 스타일</label><select id="styleSelect"><option value="glass">다크 글래스</option><option value="outline">라인 미니멀</option><option value="naked">텍스트만</option></select></div>
+   <div class="form-row"><label for="opacity">카드 불투명도 <output id="opacityVal">86%</output></label><input type="range" id="opacity" min="0.20" max="1.00" step=".02" value=".86"/></div>
+   <div class="form-row"><label for="ftp">FTP (W) · 파워존 컬러</label><input type="number" id="ftp" value="223" min="1" max="1500"/></div>
+   <p class="mini-hint">파워 컬러를 직접 선택하면 파워존 자동 색상이 꺼집니다.</p>
+  </section>
+ </aside>
+ <main class="workspace">
+  <div class="page-title"><div><p class="eyebrow">CYCLING TELEMETRY EDITOR</p><h1>라이딩을 화면에 담다.</h1><p>FIT 데이터로 만드는 60fps 커스텀 계기판 오버레이</p></div><span class="badge">100% CLIENT-SIDE</span></div>
+  <div class="stage-panel">
+   <div class="stage-toolbar"><div class="flex"><span class="live-dot"></span><strong>HUD PREVIEW</strong><span class="resolution">1920 × 1080</span></div><div class="stage-hint">카드를 드래그하여 이동 · 우하단 핸들로 크기 조절</div></div>
+   <div class="preview-shell" id="previewShell"><canvas id="preview" width="1920" height="1080" aria-label="계기판 편집 캔버스"></canvas><div class="canvas-watermark">RIDEHUD PREVIEW · TRANSPARENT BACKGROUND</div></div>
+   <div class="transport"><button id="playBtn" class="round" title="재생 또는 일시 정지">▶</button><span id="currentTime">00:00:00</span><input id="seek" type="range" min="0" max="100" step=".01" value="0"/><span id="endTime">00:00:00</span></div>
+  </div>
+  <div class="bottom-grid">
+   <section class="panel"><h3><span>04</span> 출력할 구간</h3><p class="secondary">실제 FIT 기록 시작부터의 경과시간입니다. 선택 시작점은 구간거리의 0km 기준입니다.</p>
+    <div class="time-grid"><label>시작 <input id="startInput" type="text" inputmode="numeric" value="00:00:00" placeholder="HH:MM:SS"/></label><label>종료 <input id="endInput" type="text" inputmode="numeric" value="00:00:15" placeholder="HH:MM:SS"/></label></div>
+    <div class="flex"><button id="startAtPlayhead" class="subtle-btn">현재 위치를 시작으로</button><button id="endAtPlayhead" class="subtle-btn">현재 위치를 종료로</button></div>
+    <p class="mini-hint">평균/최고/NP는 선택 구간이 아닌 원래 라이딩 시작부터 해당 시점까지 누적됩니다.</p>
+   </section>
+   <section class="panel"><h3><span>05</span> 영상 출력</h3>
+    <label class="radio-row"><input type="radio" name="format" value="webm-alpha" checked/><span><strong>WebM 60fps (투명 시도)</strong><small>가볍고 편리하지만 알파 채널 보존은 브라우저/편집기에 따라 달라질 수 있음</small></span></label>
+    <label class="radio-row"><input type="radio" name="format" value="webm-green"/><span><strong>WebM 60fps (초록 배경)</strong><small>편집기에서 크로마키 제거. 투명 영상 코덱이 안 될 때 사용</small></span></label>
+    <label class="radio-row"><input type="radio" name="format" value="png"/><span><strong>투명 PNG 시퀀스 ZIP · 정확한 60fps</strong><small>알파 채널 확실 · 컷 편집에 적합 · 파일 크기 큼</small></span></label>
+    <div class="flex form-inline"><label>크기 <select id="exportResolution"><option value="1920">1080p</option><option value="3840">4K</option></select></label><span class="frame-tag">60 FPS</span></div>
+    <button id="exportBtn" class="primary full">계기판 영상 내보내기 <span>↗</span></button>
+    <button id="cancelBtn" class="subtle-btn full" hidden>내보내기 취소</button>
+    <div class="progress-track" id="progressTrack" hidden><div id="progressFill"></div></div>
+    <div id="exportStatus" class="mini-hint">영상은 브라우저에서 생성됩니다. 서버에 업로드하지 않습니다.</div>
+   </section>
+  </div>
+  <footer>RideHUD Web v0.3 · FIT 원본 데이터를 기반으로 계산한 수치로 Garmin Connect의 최종 요약값과 약간 다를 수 있습니다.</footer>
+ </main>
+</div>
+<dialog id="helpDialog"><div class="dialog-content"><div class="flex spaced"><h2>RideHUD 사용 방법</h2><button id="closeHelp" class="ghost">닫기 ×</button></div><ol><li>Garmin Edge의 활동 기록 <b>.fit</b> 파일을 올립니다.</li><li>선택할 항목을 추가하고, 화면에서 드래그하여 자유롭게 배치합니다.</li><li>동영상 장면에 맞는 FIT 경과시간을 시작/종료로 지정합니다.</li><li>WebM 또는 투명 PNG 시퀀스를 출력해 영상 편집기에 얹습니다.</li></ol><p>투명 WebM은 모든 편집기에서 보장되지 않습니다. 검은 바탕이 나타나면 <b>PNG 시퀀스</b>로 출력하거나 <b>초록 배경 WebM</b>을 선택한 뒤 크로마키를 제거하세요. PNG 시퀀스는 편집기에서 60fps 이미지 시퀀스로 불러오면 됩니다.</p><p>무료 GitHub Pages 정적 호스팅용입니다. FIT는 사용 중인 기기에서만 읽습니다.</p></div></dialog>
+<script type="module" src="./js/app.js"></script>
+</body>
+</html>
